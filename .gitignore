@@ -1,0 +1,42 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.vscode/
+.idea/
+.claude/
+
+.env
+*.log
+result.db
+result.per_bin.json
+output/
+output-unstripped/
+
+# Reproducible per-case input binaries (built by running the case's Dockerfile).
+cases/**/readelf
+cases/**/nm
+cases/**/objdump
+cases/**/addr2line
+cases/**/date
+cases/**/split
+
+# Regenerated when running cases (output of c_patch.py / llm_patch.py).
+cases/**/*_c_patched
+cases/**/llmpatch_output
+cases/**/llmpatch_llm_output
+
+# Build artifacts for the LLVM passes.
+recompiler/build/
+recompiler/tmp/
+
+# Meson build output for the CGC support libs.
+datasets/cgc-challenges/lib/lib/
+datasets/cgc-challenges/lib/build/

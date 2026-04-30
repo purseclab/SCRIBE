@@ -1,0 +1,12 @@
+services:
+
+  # Interactive shell with the SCRIBE toolchain (LLVM 15, Ghidra, angr-dev,
+  # patcherex2 with the recompiler passes installed). Mount a case directory
+  # and run its c_patch.py.
+  base:
+    image: recomp_base:${TAG:-latest}
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]

@@ -1,0 +1,63 @@
+diff --git a/clang/lib/Sema/SemaCast.cpp b/clang/lib/Sema/SemaCast.cpp
+index 7b5bc7ca8..5db58af5d 100644
+--- a/clang/lib/Sema/SemaCast.cpp
++++ b/clang/lib/Sema/SemaCast.cpp
+@@ -2974,6 +2974,41 @@ void CastOperation::CheckCStyleCast() {
+   }
+ 
+   // The type we're casting to is known to be a scalar, a vector, or a matrix.
++  if (!SrcType->isScalarType() && !SrcType->isVectorType() &&
++      !SrcType->isMatrixType()) {
++    if (auto *CE = dyn_cast<CallExpr>(SrcExpr.get())) {
++      FunctionDecl *FD = CE->getDirectCallee();
++      if (FD && FD->getReturnType() != DestType) {
++        if (auto *FPT = dyn_cast<FunctionProtoType>(FD->getType().getTypePtr())) {
++
++          unsigned ScribeDiagID = Self.getDiagnostics().getCustomDiagID(
++              clang::DiagnosticsEngine::Warning,
++              "SCRIBE: Force casting return type of function '%0' from '%1' to '%2'"
++          );
++          Self.Diag(SrcExpr.get()->getExprLoc(), ScribeDiagID)
++              << FD->getName() << FD->getReturnType().getAsString() << DestType.getAsString();
++
++          QualType NewFunctionType = Self.Context.getFunctionType(
++              DestType,
++              FPT->getParamTypes(),
++              FPT->getExtProtoInfo()
++          );
++
++          CE->setType(DestType);
++
++          if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE->getCallee())) {
++              ICE->setType(Self.Context.getPointerType(NewFunctionType));
++          }
++          // uncomment this to update for all calls to this function
++          // but it might be too aggressive
++          // FD->setType(NewFunctionType);
++          SrcExpr.set(CE);
++          SrcType = DestType;
++      }
++      }
++    }
++  }
++
+ 
+   // Require the operand to be a scalar, a vector, or a matrix.
+   if (!SrcType->isScalarType() && !SrcType->isVectorType() &&
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 83081bbf0..50365217d 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -6070,6 +6070,12 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
+   // If too many are passed and not variadic, error on the extras and drop
+   // them.
+   if (Args.size() > NumParams) {
++    unsigned ScribeDiagID = PP.getDiagnostics().getCustomDiagID(
++        clang::DiagnosticsEngine::Warning,
++        "SCRIBE: Enabling argument passing to function '%0(void)'"
++    );
++    Diag(Call->getBeginLoc(), ScribeDiagID) << FDecl->getNameAsString();
++    if (false) // disable following code
+     if (!Proto->isVariadic()) {
+       TypoCorrection TC;
+       if (FDecl && (TC = TryTypoCorrectionForCall(*this, Fn, FDecl, Args))) {
